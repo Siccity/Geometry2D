@@ -35,6 +35,7 @@ public class Area2DEditor : Editor {
 
     public virtual void OnUpdate() {
         if (constrainToParentArea) {
+            if (area2d.parentArea == null) return;
             area2d.transform.position = area2d.parentArea.LocalToWorld(area2d.parentArea.WorldToLocal(area2d.transform.position));
             area2d.transform.localRotation = Quaternion.identity;
         }
