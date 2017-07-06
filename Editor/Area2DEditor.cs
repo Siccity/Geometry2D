@@ -11,7 +11,7 @@ public class Area2DEditor : Editor {
 	bool recordedDrag;
 	public static bool constrainToParentArea = true;
 	public static bool gridSnap = true;
-    public static float gridSize = 0.1f;
+	public static float gridSize = 0.1f;
 
 	bool showVert;
     

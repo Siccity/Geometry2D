@@ -45,6 +45,10 @@ public struct Polygon2D {
 
 	/// <summary> Constructor </summary>
 	public Polygon2D(params Vector2[] verts) {
+        if (verts.Length < 3) {
+            Debug.LogWarning("You cannot create a polygon with less than 3 verts. Input count: " + verts.Length);
+            verts = new Vector2[] { new Vector2(-1, 1), new Vector2(1, 1), new Vector2(1, -1), new Vector2(-1, -1) };
+        }
 		_verts = verts;
 		_tris = Triangulate(verts);
 		_triArea = CacheTriArea(verts, _tris);
@@ -115,26 +119,25 @@ public struct Polygon2D {
 	public bool Contains(params Line2D[] lines) {
 		if (lines.Length == 0) return true;
 		if (!Contains(lines[0].a)) return false;
+        //Possible optimization: Check for contains a/b instead of check intersect?
 		return (!IntersectEdge(lines));
 	}
 
 	/// <summary> Returns true if polys intersect eachother</summary>
 	public bool Intersect(Polygon2D poly) {
+        //Possible optimization: bounds check?
+        //Start by performing a quick bounds test
+        //if (!bounds.Intersects(poly.bounds)) return false;
+        //Test against all edges
 		Line2D[] polyEdges = poly.GetEdges();
-		return (Intersect(polyEdges));
-	}
-
-	/// <summary> Return true if any line is contained in or intersects with this polygon </summary>
-	public bool Intersect(params Line2D[] lines) {
-		if (lines.Length == 0) return false;
-		//If all points are inside, no lines will intersect with the edges, but we still want to return true
-		if (Contains(lines[0].a)) return true;
-		if (IntersectEdge(lines)) return true;
-		return false;
+        if (Contains(polyEdges[0].Center)) return true;
+        if (poly.Contains(GetEdge(0).Center)) return true;
+        return (IntersectEdge(polyEdges));
 	}
 
 	/// <summary> Return true if any line intersects the edge of this polygon </summary>
 	public bool IntersectEdge(params Line2D[] lines) {
+        //Possible optimization: Chache edges
 		Line2D[] polyEdges = GetEdges();
 		for (int i = 0; i < polyEdges.Length; i++) {
 			for (int k = 0; k < lines.Length; k++) {

@@ -51,4 +51,8 @@ public struct Bounds2D {
 		point -= center;
 		return Mathf.Abs(point.x) <= extents.x && Mathf.Abs(point.y) <= extents.y;
 	}
+
+    public override string ToString() {
+        return "Bounds2D[" + center +", " + size + "]";
+    }
 }

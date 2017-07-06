@@ -67,22 +67,41 @@ public struct Line2D {
 		return new Line2D(a + offset, b + offset);
 	}
 
-	/// <summary> Returns a point between t0 (a) and t1 (b). Unclamped. </summary>
-	public Vector2 LerpPoint(float t) {
+    /// <summary> Returns a new Line2D which has been cropped in both ends. </summary>
+    public Line2D Crop(float startDist,float endDist) {
+        return new Line2D(LerpDistance(startDist), LerpDistance(length - endDist));
+    }
+
+
+    /// <summary> Returns a point between a (0) and b (1). Unclamped. </summary>
+    public Vector2 Lerp(float t) {
 		return a + (ab * t);
 	}
 
     /// <summary> Returns a point between a (0) and b (1). Clamped between 0 and 1. </summary>
-	public Vector2 LerpPointClamped(float t) {
-        return LerpPoint(Mathf.Clamp01(t));
+	public Vector2 LerpClamped(float t) {
+        return Lerp(Mathf.Clamp01(t));
     }
 
-	public Vector2 Project(Vector2 a, Vector2 b) {
-		return (Vector2.Dot(a, b)) / Vector3.Magnitude(b) * (b / Vector3.Magnitude(b));
-	}
+    /// <summary> Returns point between a (0) and b (length). Unclamped. </summary>
+    public Vector2 LerpDistance(float d) {
+        return a + (ab.normalized * d);
+    }
 
-	/// <summary> Returns a value where 0 = line start and 1 = line end. Unclamped.</summary>
-	public float PositionAlongLine(Vector2 p) {
+    /// <summary> Returns point between a (0) and b (length). Clamped between a and b. </summary>
+    public Vector2 LerpDistanceClamped(float d) {
+        return a + (ab.normalized * d);
+    }
+
+    /// <summary> Project a point onto this line </summary>
+	public Vector2 Project(Vector2 p) {
+        Vector2 a = ab.normalized;
+        p.Normalize();
+        return Vector2.Dot(a, p) * p;
+    }
+
+    /// <summary> Returns a value where 0 = line start and 1 = line end. Unclamped.</summary>
+    public float PositionAlongLine(Vector2 p) {
         Vector2 otherAB = ab.Rotate90();
         float denominator = (ab.y * otherAB.x - ab.x * otherAB.y);
         float t1 =
@@ -102,7 +121,7 @@ public struct Line2D {
     }
 
     /// <summary> Returns the distance between p and the closest point on the line segment </summary>
-    public float DistanceFromPoint(Vector2 p) {
+    public float DistanceFromPointSegment(Vector2 p) {
 		return Vector2.Distance(GetClosestPointSegment(p), p);
 	}
     
