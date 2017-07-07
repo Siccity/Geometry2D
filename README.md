@@ -13,4 +13,4 @@ Useful for many things including calculating intersections, projections, distanc
 * *Area2D* - Lets you assign and edit a polygon in 3D-space for various purposes.
 
 **Extensions**
-* *Geometry2D* - Contains extension methods for Vector2D.
+* *Geometry2D* - Contains extension methods for Vector2.
