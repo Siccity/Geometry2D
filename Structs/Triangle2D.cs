@@ -20,6 +20,9 @@ public struct Triangle2D {
     /// <summary> Side length between a and b </summary>
     public float C { get { return _C; } }
     [SerializeField] private float _C;
+    /// <summary> Side length between a and b </summary>
+    public float area { get { return _area; } }
+    [SerializeField] private float _area;
 
     /// <summary> Constructor </summary>
     public Triangle2D (Vector2 a, Vector2 b, Vector2 c) {
@@ -29,13 +32,7 @@ public struct Triangle2D {
 		_A = Vector2.Distance(b, c);
 		_B = Vector2.Distance(a, c);
 		_C = Vector2.Distance(a, c);
-	}
-
-	/// <summary> Returns the area of this triangle </summary>
-	public float GetArea() {
-		//Herons formula
-		float p = (A + B + C) / 2f;
-		return Mathf.Sqrt(p * (p - A) * (p - B) * (p - C));
+        _area = Geometry2D.ShoelaceFormula(a, b, c);
 	}
 
 	/// <summary> Return true if point is inside triangle </summary>
@@ -62,5 +59,4 @@ public struct Triangle2D {
 		float r2 = UnityEngine.Random.value;
 		return (1 - Mathf.Sqrt(r1)) * a + (Mathf.Sqrt(r1) * (1 - r2)) * b + (Mathf.Sqrt(r1) * r2) * c;
 	}
-
 }

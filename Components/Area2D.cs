@@ -148,15 +148,6 @@ public class Area2D : MonoBehaviour {
 			worldverts[i] = transform.TransformPoint(new Vector3(poly.verts[i].x, 0, poly.verts[i].y));
 		}
 	}
-
-	void OnDrawGizmos() {
-		for (int i = 0; i < poly.verts.Length - 1; i++) {
-			Line2D line = new Line2D(poly.verts[i], poly.verts[i + 1]);
-			Gizmos.DrawLine(LocalToWorld(line.Center), LocalToWorld(line.Center + line.Normal));
-		}
-	}
-
-
 }
 
 public static class Area2DExtensions {

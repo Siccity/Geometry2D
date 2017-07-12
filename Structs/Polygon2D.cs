@@ -1,6 +1,6 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using UnityEngine;
-using System;
 
 /// <summary> Immutable representation of a polygon defined by an arbitrary number of points in 2D space </summary>
 [Serializable]
@@ -8,18 +8,27 @@ public struct Polygon2D {
     /// <summary> Verts in local space. </summary>
     public Vector2[] verts { get { return _verts; } }
     [SerializeField] private Vector2[] _verts;
-	/// <summary> Triangle indices </summary>
-	public int[] tris { get { return _tris; } }
-    [SerializeField] private int[] _tris;
+    /// <summary> Total polygon area. </summary>
+    public float area { get { return _area; } }
+    [SerializeField] private float _area;
+    /// <summary> Triangle indices </summary>
+    public int[] triIndices { get { return _triIndices; } }
+    [SerializeField] private int[] _triIndices;
 	/// <summary> Triangle count </summary>
 	public int triCount { get { return _triCount; } }
     [SerializeField] private int _triCount;
 	/// <summary> Area in square units for each triangle </summary>
-	public float[] triArea { get { return _triArea; } }
-    [SerializeField] private float[] _triArea;
+	public Triangle2D[] tris { get { return _tris; } }
+    [SerializeField] private Triangle2D[] _tris;
     /// <summary> Get the bounds of the polygon </summary>
     public Bounds2D bounds { get { return _bounds; } }
     [SerializeField] private Bounds2D _bounds;
+    /// <summary> Get the bounds of the polygon </summary>
+    public Line2D[] edges { get { return _edges; } }
+    [SerializeField] private Line2D[] _edges;
+    /// <summary> Returns true if polygon verts are in clockwise order </summary>
+    public bool isClockwise { get { return _isClockwise; } }
+    [SerializeField] private bool _isClockwise;
 
     #region Constructors
     /// <summary> Returns a centered 2x2 quad </summary>
@@ -50,28 +59,23 @@ public struct Polygon2D {
             verts = new Vector2[] { new Vector2(-1, 1), new Vector2(1, 1), new Vector2(1, -1), new Vector2(-1, -1) };
         }
 		_verts = verts;
-		_tris = Triangulate(verts);
-		_triArea = CacheTriArea(verts, _tris);
-        _triCount = _tris.Length / 3;
+		_triIndices = Triangulate(verts);
+        float area = Geometry2D.ShoelaceFormula(_verts);
+        _area = Mathf.Abs(area);
+        _triCount = _triIndices.Length / 3;
         _bounds = new Bounds2D(verts);
+        _edges = GetEdges(_verts);
+        _tris = GetTriangles(_verts, _triIndices);
+        _isClockwise = area < 0;
 	}
 	#endregion
 
 	#region Public methods
-	/// <summary> Returns the total area of the Area2D in square units </summary>
-	public float GetTotalArea() {
-		float area = 0f;
-		for (int i = 0; i<triArea.Length; i++) {
-			area += triArea[i];
-		}
-		return area;
-	}
-
     /// <summary> Convert Polygon2D to a mesh </summary>
     public Mesh ToMesh() {
         Mesh mesh = new Mesh();
         mesh.vertices = Array.ConvertAll(verts,x => new Vector3(x.x,0,x.y));
-        mesh.triangles = tris;
+        mesh.triangles = triIndices;
         Vector2[] uvs = new Vector2[verts.Length];
         Array.Copy(verts, uvs, verts.Length);
         for (int i = 0; i < uvs.Length; i++) {
@@ -84,26 +88,17 @@ public struct Polygon2D {
         return mesh;
     }
 
-	public Triangle2D GetTriangle(int index) {
-		return new Triangle2D(
-			verts[tris[index * 3]],
-			verts[tris[index * 3 + 1]],
-			verts[tris[index * 3 + 2]]
-			);
-	}
-
 	/// <summary> Returns a random local point inside the Area2D </summary>
 	public Vector2 GetRandomPoint() {
 		int tri = GetWeightedTriIndex();
-		Triangle2D triangle = GetTriangle(tri);
-		return triangle.GetRandomPoint();
+		return tris[tri].GetRandomPoint();
 		
 	}
 
 	/// <summary> Returns true if local point is inside this poly </summary>
 	public bool Contains(Vector2 point) {
 		for (int i = 0; i < triCount; i++) {
-			if (GetTriangle(i).Contains(point)) return true;
+			if (tris[i].Contains(point)) return true;
 		}
 		return false;
 	}
@@ -111,8 +106,7 @@ public struct Polygon2D {
 	/// <summary> Returns true if poly is completely inside this poly </summary>
 	public bool Contains(Polygon2D poly) {
 		//Check if poly contains all lines
-		Line2D[] polyLines = poly.GetEdges();
-		return (Contains(polyLines));
+		return (Contains(poly.edges));
 	}
 
 	/// <summary> Returns true if poly is completely inside this poly </summary>
@@ -129,19 +123,17 @@ public struct Polygon2D {
         //Start by performing a quick bounds test
         //if (!bounds.Intersects(poly.bounds)) return false;
         //Test against all edges
-		Line2D[] polyEdges = poly.GetEdges();
-        if (Contains(polyEdges[0].Center)) return true;
-        if (poly.Contains(GetEdge(0).Center)) return true;
-        return (IntersectEdge(polyEdges));
+        if (Contains(poly.edges[0].Center)) return true;
+        if (poly.Contains(edges[0].Center)) return true;
+        return (IntersectEdge(poly.edges));
 	}
 
 	/// <summary> Return true if any line intersects the edge of this polygon </summary>
 	public bool IntersectEdge(params Line2D[] lines) {
         //Possible optimization: Chache edges
-		Line2D[] polyEdges = GetEdges();
-		for (int i = 0; i < polyEdges.Length; i++) {
+		for (int i = 0; i < edges.Length; i++) {
 			for (int k = 0; k < lines.Length; k++) {
-				if (polyEdges[i].SegmentsIntersect(lines[k])) return true;
+				if (edges[i].SegmentsIntersect(lines[k])) return true;
 			}
 		}
 		return false;
@@ -176,21 +168,6 @@ public struct Polygon2D {
 		return new Polygon2D(verts);
 	}
 
-    /// <summary> Returns edge by index </summary>
-    public Line2D GetEdge(int index) {
-        return new Line2D(
-            verts[index],
-            index < verts.Length - 1 ? verts[index + 1] : verts[0]
-            );
-    }
-
-	/// <summary> Returns all edges </summary>
-	public Line2D[] GetEdges() {
-		Line2D[] edges = new Line2D[verts.Length];
-		for (int i = 0; i < verts.Length; i++) edges[i] = GetEdge(i);
-		return edges;
-	}
-
     public override string ToString() {
         return "Polygon2D["+string.Join(",", Array.ConvertAll(verts, x => x.ToString()))+"]";
     }
@@ -199,36 +176,38 @@ public struct Polygon2D {
     #region Private methods
     /// <summary> Get a random triangle based on relative size of triangles </summary>
     private int GetWeightedTriIndex() {
-		float totalArea = GetTotalArea();
-		float r = UnityEngine.Random.Range(0, totalArea);
+		float r = UnityEngine.Random.Range(0, this.area);
 		float area = 0;
-		for (int i = 0; i < triArea.Length; i++) {
-			area += triArea[i];
+		for (int i = 0; i < tris.Length; i++) {
+            area += tris[i].area;
 			if (r <= area) return i;
 		}
 		return -1;
 	}
-	#endregion
 
-	#region Cache
-	/// <summary> Calculate area for each triangle </summary>
-	private static float[] CacheTriArea(Vector2[] verts, int[] tris) {
-		int triCount = tris.Length / 3;
-		float[] triAreas = new float[triCount];
-		for (int i = 0; i < triAreas.Length; i++) {
-			Triangle2D tri = new Triangle2D(
-				verts[tris[i * 3]],
-				verts[tris[i * 3 + 1]],
-				verts[tris[i * 3 + 2]]
-			);
-			triAreas[i] = tri.GetArea();
-		}
-		return triAreas;
-	}
-	#endregion
+    /// <summary> Returns all edges </summary>
+    private static Line2D[] GetEdges(Vector2[] verts) {
+        Line2D[] edges = new Line2D[verts.Length];
+        for (int i = 0; i < edges.Length; i++) edges[i] = new Line2D(
+            verts[i],
+            i < verts.Length - 1 ? verts[i + 1] : verts[0]
+            );
+        return edges;
+    }
 
-	#region Triangulator
-	private static int[] Triangulate(Vector2[] verts) {
+    private static Triangle2D[] GetTriangles(Vector2[] verts, int[] triIndices) {
+        Triangle2D[] tris = new Triangle2D[triIndices.Length / 3];
+        for (int i = 0; i < tris.Length; i++) tris[i] = new Triangle2D(
+            verts[triIndices[i * 3]],
+            verts[triIndices[i * 3 + 1]],
+            verts[triIndices[i * 3 + 2]]
+            );
+        return tris;
+    }
+    #endregion
+
+    #region Triangulator
+    private static int[] Triangulate(Vector2[] verts) {
 		List<int> indices = new List<int>();
 
 		int n = verts.Length;
@@ -310,7 +289,6 @@ public struct Polygon2D {
 
 	#region Editor
 	public void DebugDraw(Color col) {
-		Line2D[] edges = GetEdges();
         for (int i = 0; i < edges.Length; i++) {
 			Debug.DrawLine(
 				new Vector3(edges[i].a.x,0,edges[i].a.y), 
