@@ -73,18 +73,21 @@ public class Area2DEditor : Editor {
         gridSnap = EditorGUILayout.Toggle("Grid snap", gridSnap);
         if (gridSnap) gridSize = EditorGUILayout.FloatField(gridSize);
         EditorGUILayout.EndHorizontal();
+        //Poly
+        SerializedObject serializedObject = new UnityEditor.SerializedObject(area2d);
+        SerializedProperty serializedLine = serializedObject.FindProperty("_poly");
+        EditorGUILayout.PropertyField(serializedLine);
+        serializedObject.ApplyModifiedProperties();
     }
     public virtual void OnDrawReadonlyInfo() {
         EditorGUILayout.BeginHorizontal();
         EditorGUILayout.LabelField("Total area:");
-        EditorGUILayout.SelectableLabel(area2d.poly.GetTotalArea().ToString());
+        EditorGUILayout.SelectableLabel(area2d.poly.area.ToString());
         EditorGUILayout.EndHorizontal();
-        showVert = EditorGUILayout.Foldout(showVert, "Verts (" + area2d.poly.verts.Length + ")");
-        if (showVert) {
-            for (int i = 0; i < area2d.poly.verts.Length; i++) {
-                EditorGUILayout.Vector2Field(i.ToString(), area2d.poly.verts[i]);
-            }
-        }
+        EditorGUILayout.BeginHorizontal();
+        EditorGUILayout.LabelField("Direction:");
+        EditorGUILayout.SelectableLabel(area2d.poly.isClockwise?"Clockwise":"Counter-Clockwise");
+        EditorGUILayout.EndHorizontal();
     }
 
 	public virtual void OnSceneGUI() {
@@ -191,7 +194,7 @@ public class Area2DEditor : Editor {
     public virtual void DrawPolygon(Color col) {
         Handles.color = col;
         Vector3[] verts = area2d.worldverts;
-        int[] tris = area2d.poly.tris;
+        int[] tris = area2d.poly.triIndices;
 		List<int[]> fixedTris = new List<int[]>();
 		for (int i = 0; i < tris.Length; i += 3) {
 			int t0 = tris[i];

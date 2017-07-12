@@ -70,4 +70,17 @@ public static class Geometry2D {
 	public static float Angle(this Vector2 v) {
 		return Mathf.Atan2(v.y, v.x) * Mathf.Rad2Deg;
 	}
+
+    /// <summary> 
+    /// Gets area of a polygon using 'shoelace-formula' https://en.wikipedia.org/wiki/Shoelace_formula.
+    /// Output is negative if verts are in counter-clockwise order.
+    /// </summary>
+    public static float ShoelaceFormula(params Vector2[] verts) {
+        float sum = 0;
+        for (int i = 0; i < verts.Length; i++) {
+            if (i == verts.Length - 1) sum += (verts[0].x - verts[i].x) * (verts[0].y + verts[i].y);
+            else sum += (verts[i + 1].x - verts[i].x) * (verts[i + 1].y + verts[i].y);
+        }
+        return sum * 0.5f;
+    }
 }
