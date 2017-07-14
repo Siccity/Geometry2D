@@ -189,9 +189,26 @@ public struct Line2D {
 #endif
 	}
 
-	public override string ToString() {
+    #region Overloads
+    public override string ToString() {
 		return "Line2D["+a+","+b+"]";
 	}
+
+    public override bool Equals(System.Object obj) {
+        return obj is Line2D && this == (Line2D)obj;
+    }
+    public override int GetHashCode() {
+        return a.GetHashCode() ^ b.GetHashCode();
+    }
+
+    public static bool operator ==(Line2D a, Line2D b) {
+        return (a.a == b.a) && (a.b == b.b);
+    }
+
+    public static bool operator !=(Line2D a, Line2D b) {
+        return !(a == b);
+    }
+    #endregion
 }
 
 public struct Line2DIntersection {

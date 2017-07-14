@@ -52,7 +52,24 @@ public struct Bounds2D {
 		return Mathf.Abs(point.x) <= extents.x && Mathf.Abs(point.y) <= extents.y;
 	}
 
+#region Overrides
     public override string ToString() {
         return "Bounds2D[" + center +", " + size + "]";
     }
+
+    public override bool Equals(System.Object obj) {
+        return obj is Bounds2D && this == (Bounds2D)obj;
+    }
+    public override int GetHashCode() {
+        return center.GetHashCode() ^ size.GetHashCode();
+    }
+
+    public static bool operator ==(Bounds2D a, Bounds2D b) {
+        return (a.center == b.center) && (a.extents == b.extents);
+    }
+
+    public static bool operator !=(Bounds2D a, Bounds2D b) {
+        return !(a == b);
+    }
+#endregion
 }

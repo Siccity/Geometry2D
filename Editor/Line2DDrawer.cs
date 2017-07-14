@@ -15,7 +15,6 @@ public class Line2DDrawer : PropertyDrawer {
         // Draw label
         position = EditorGUI.PrefixLabel(position, GUIUtility.GetControlID(FocusType.Passive), label);
 
-
         // Don't make child fields be indented
         var indent = EditorGUI.indentLevel;
         EditorGUI.indentLevel = 0;

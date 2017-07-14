@@ -48,14 +48,10 @@ public class Area2DEditor : Editor {
             Tools.hidden = editMode;
             SceneView.RepaintAll();
         }
-        if (editMode) {
-            EditorGUILayout.BeginVertical((GUIStyle)"ObjectPickerResultsOdd");
-            EditorGUI.indentLevel = 0;
-            EditorGUILayout.LabelField("Tools", EditorStyles.boldLabel);
-            EditorGUI.indentLevel = 1;
-            OnDrawEditSettings();
-            EditorGUILayout.EndVertical();
-        }
+        EditorGUI.indentLevel = 0;
+        EditorGUILayout.LabelField("Tools", EditorStyles.boldLabel);
+        EditorGUI.indentLevel = 1;
+        OnDrawEditSettings();
         constrainToParentArea = EditorGUILayout.Toggle("Constrain to parent Area2D",constrainToParentArea);
 
 

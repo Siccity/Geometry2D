@@ -42,7 +42,7 @@ public struct Polygon2D {
 	}
 
 	/// <summary> Constructs and returns a centered, circular Polygon2D with a set number of segments. </summary>
-	/// <param name="segments">3 or more segments recommended. </param>
+	/// <param name="segments">4 or more segments recommended. </param>
 	public Polygon2D Circle(int segments) {
 		Vector2[] verts = new Vector2[segments];
 		for (int i = 0; i < segments; i++) {
@@ -54,8 +54,8 @@ public struct Polygon2D {
 
 	/// <summary> Constructor </summary>
 	public Polygon2D(params Vector2[] verts) {
-        if (verts.Length < 3) {
-            Debug.LogWarning("You cannot create a polygon with less than 3 verts. Input count: " + verts.Length);
+        if (verts.Length < 4) {
+            Debug.LogWarning("You cannot create a polygon with less than 4 verts. Input count: " + verts.Length);
             verts = new Vector2[] { new Vector2(-1, 1), new Vector2(1, 1), new Vector2(1, -1), new Vector2(-1, -1) };
         }
 		_verts = verts;
@@ -130,7 +130,6 @@ public struct Polygon2D {
 
 	/// <summary> Return true if any line intersects the edge of this polygon </summary>
 	public bool IntersectEdge(params Line2D[] lines) {
-        //Possible optimization: Chache edges
 		for (int i = 0; i < edges.Length; i++) {
 			for (int k = 0; k < lines.Length; k++) {
 				if (edges[i].SegmentsIntersect(lines[k])) return true;
@@ -167,9 +166,34 @@ public struct Polygon2D {
 		}
 		return new Polygon2D(verts);
 	}
+    #endregion
 
+    #region Overrides
     public override string ToString() {
-        return "Polygon2D["+string.Join(",", Array.ConvertAll(verts, x => x.ToString()))+"]";
+        return "Polygon2D[" + string.Join(",", Array.ConvertAll(verts, x => x.ToString())) + "]";
+    }
+
+    public override bool Equals(System.Object obj) {
+        return obj is Polygon2D && this == (Polygon2D)obj;
+    }
+    public override int GetHashCode() {
+        int hash = 0;
+        for (int i = 0; i < _verts.Length; i++) {
+            hash ^= _verts[i].GetHashCode();
+        }
+        return hash;
+    }
+
+    public static bool operator ==(Polygon2D a, Polygon2D b) {
+        if (a._verts.Length != b._verts.Length) return false;
+        for (int i = 0; i < a._verts.Length; i++) {
+            if (a._verts[i] != b._verts[i]) return false;
+        }
+        return true;
+    }
+
+    public static bool operator !=(Polygon2D a, Polygon2D b) {
+        return !(a == b);
     }
     #endregion
 

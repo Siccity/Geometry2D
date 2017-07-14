@@ -49,9 +49,26 @@ public struct Triangle2D {
 		return (p1.x - p3.x) * (p2.y - p3.y) - (p2.x - p3.x) * (p1.y - p3.y);
 	}
 
+#region Overrides
     public override string ToString() {
         return "Triangle2D[" + a + "," + b + "," + c + "]";
     }
+
+    public override bool Equals(System.Object obj) {
+        return obj is Triangle2D && this == (Triangle2D)obj;
+    }
+    public override int GetHashCode() {
+        return a.GetHashCode() ^ b.GetHashCode() ^ c.GetHashCode();
+    }
+
+    public static bool operator ==(Triangle2D a, Triangle2D b) {
+        return (a.a == b.a) && (a.b == b.b) && (a.c == b.c);
+    }
+
+    public static bool operator !=(Triangle2D a, Triangle2D b) {
+        return !(a == b);
+    }
+    #endregion
 
     /// <summary> Return random point inside triangle </summary>
     public Vector2 GetRandomPoint() {
