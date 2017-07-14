@@ -14,3 +14,5 @@ Useful for many things including calculating intersections, projections, distanc
 
 **Extensions**
 * *Geometry2D* - Contains extension methods for Vector2.
+
+![alt text](http://i.imgur.com/OWEFj72.gif "Area2D demonstration")
