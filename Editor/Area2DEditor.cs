@@ -7,12 +7,13 @@ using System.Linq;
 [CustomEditor(typeof(Area2D))]
 [CanEditMultipleObjects]
 public class Area2DEditor : Editor {
-	int dragging = -1;
+    /// <summary> Index of currently dragged vertex. </summary>
+	int draggedVert = -1;
 	bool recordedDrag;
 	public static bool constrainToParentArea = true;
-	public static bool gridSnap = true;
-	public static float gridSize = 0.1f;
-
+    public static int gridIndex = 2;
+    readonly static float[] gridSizes = new float[5] { 1, 0.5f, 0.1f, 0.05f, 0.01f };
+    public static float gridSize { get { return gridSizes[gridIndex]; } }
 	bool showVert;
     
     public static Texture editColliderIcon { get { return _editColliderIcon != null ? _editColliderIcon : _editColliderIcon = EditorGUIUtility.FindTexture("EditCollider"); } }
@@ -20,7 +21,7 @@ public class Area2DEditor : Editor {
     public static bool editMode; 
 
     protected Area2D area2d;
-
+    int i = 0;
     public void OnEnable() {
         area2d = target as Area2D;
         Tools.hidden = editMode;
@@ -49,26 +50,21 @@ public class Area2DEditor : Editor {
             SceneView.RepaintAll();
         }
         EditorGUI.indentLevel = 0;
+
+
+
         EditorGUILayout.LabelField("Tools", EditorStyles.boldLabel);
         EditorGUI.indentLevel = 1;
         OnDrawEditSettings();
         constrainToParentArea = EditorGUILayout.Toggle("Constrain to parent Area2D",constrainToParentArea);
 
-
         EditorGUI.indentLevel = 0;
         EditorGUILayout.LabelField("Read-Only info", EditorStyles.boldLabel);
         EditorGUI.indentLevel = 1;
         OnDrawReadonlyInfo();
-        EditorGUI.indentLevel = 0;
-        EditorGUILayout.LabelField("DefaultInspector", EditorStyles.boldLabel);
-        base.DrawDefaultInspector();
 	}
 
     public virtual void OnDrawEditSettings() {
-        EditorGUILayout.BeginHorizontal();
-        gridSnap = EditorGUILayout.Toggle("Grid snap", gridSnap);
-        if (gridSnap) gridSize = EditorGUILayout.FloatField(gridSize);
-        EditorGUILayout.EndHorizontal();
         //Poly
         SerializedObject serializedObject = new UnityEditor.SerializedObject(area2d);
         SerializedProperty serializedLine = serializedObject.FindProperty("_poly");
@@ -87,9 +83,10 @@ public class Area2DEditor : Editor {
     }
 
 	public virtual void OnSceneGUI() {
-		DrawPolygon(Color.green);
+        DrawPolygon(Color.green);
         if (editMode) EditVerts();
-	}
+        //Handles.Label(Vector3.zero, "ASDF");
+    }
 
     protected void EditVerts() {
         Event e = Event.current;
@@ -98,31 +95,49 @@ public class Area2DEditor : Editor {
 
         Handles.color = Color.green;
         //If we are dragging a vertex
-        if (dragging != -1) {
-            Vector3 point = area2d.worldverts[dragging];
+        if (draggedVert != -1) {
+            Vector3 point = area2d.worldverts[draggedVert];
             Handles.DotCap(0, point, Camera.current.transform.rotation, HandleUtility.GetHandleSize(point) * 0.05f);
             switch (e.type) {
-                case EventType.MouseDrag:
-                    //While we are dragging a vertex
-                    if (e.button != 0) break;
-                    if (!recordedDrag) {
-                        Undo.RecordObject(area2d, "Area2D point move");
-                        EditorUtility.SetDirty(area2d);
-                        recordedDrag = true;
-                    }
-                    Vector2 localPos = area2d.WorldToLocal(cursorPos);
-                    Vector2[] verts = area2d.poly.verts;
-                    area2d.poly.verts[dragging] = gridSnap ? new Vector2(Mathf.Round(localPos.x / gridSize) * gridSize, Mathf.Round(localPos.y / gridSize) * gridSize) : new Vector2(localPos.x, localPos.y);
-                    area2d.poly = new Polygon2D(verts);
-                    break;
-                case EventType.MouseUp:
-                    //When we release a vertex
-                    if (e.button != 0) break;
-                    dragging = -1;
-                    break;
-                case EventType.layout:
-                    HandleUtility.AddDefaultControl(controlID);
-                    break;
+            case EventType.MouseDrag:
+                //While we are dragging a vertex
+                if (e.button != 0) break;
+                if (!recordedDrag) {
+                    Undo.RecordObject(area2d, "Area2D point move");
+                    EditorUtility.SetDirty(area2d);
+                    recordedDrag = true;
+                }
+                Vector2 localPos = area2d.WorldToLocal(cursorPos);
+                Vector2[] verts = area2d.poly.verts;
+                area2d.poly.verts[draggedVert] = e.control ? new Vector2(Mathf.Round(localPos.x / gridSize) * gridSize, Mathf.Round(localPos.y / gridSize) * gridSize) : new Vector2(localPos.x, localPos.y);
+                area2d.poly = new Polygon2D(verts);
+
+            break;
+            case EventType.MouseUp:
+                //When we release a vertex
+                if (e.button != 0) break;
+                draggedVert = -1;
+                break; 
+            case EventType.ScrollWheel:
+                if (e.control) {
+                    if (e.delta.y > 0) gridIndex++;
+                    else if (e.delta.y < 0) gridIndex--;
+                    gridIndex = Mathf.Clamp(gridIndex, 0, gridSizes.Length - 1);
+                    e.Use();
+                }
+                break;
+            case EventType.layout:
+                HandleUtility.AddDefaultControl(controlID);
+            break;
+            case EventType.Repaint:
+                if (draggedVert != -1) {
+                    Vector2 vert = area2d.poly.verts[draggedVert];
+                    string text = string.Format("    ({0}, {1})", vert.x, vert.y);
+                    if (e.control) text += "\n    Snap: " + gridSize;
+                    Handles.Label(area2d.worldverts[draggedVert], text);
+
+                }
+                break;
             }
         }
         //If we are not dragging a vertex 
@@ -138,7 +153,7 @@ public class Area2DEditor : Editor {
                         recordedDrag = false;
                         //When we click a vertex
                         if (e.button == 0) {
-                            dragging = hoverVert;
+                            draggedVert = hoverVert;
                             e.Use();
                         }
                         break;
@@ -175,7 +190,7 @@ public class Area2DEditor : Editor {
                             List<Vector2> verts = area2d.poly.verts.ToList();
                             verts.Insert(hoverEdge + 1, localPos);
                             area2d.poly = new Polygon2D(verts.ToArray());
-                            dragging = hoverEdge + 1;
+                            draggedVert = hoverEdge + 1;
                             break;
                         case EventType.layout:
                             HandleUtility.AddDefaultControl(controlID);
@@ -272,9 +287,8 @@ public class Area2DEditor : Editor {
         Vector2 vector = GUI.skin.label.CalcSize(content);
         Rect position2 = new Rect(position.xMax + 5f, controlRect.yMin + (controlRect.height - vector.y) * 0.5f, vector.x, controlRect.height);
         GUILayout.Space(2f);
-        bool result = GUI.Toggle(position, editing, EditorGUIUtility.IconContent("EditCollider"), "Button");
+        bool result = GUI.Toggle(position, editing, new GUIContent(EditorGUIUtility.IconContent("EditCollider").image,"Edit polygon vertices.\n\n - Hold Ctrl after clicking control handle to snap to grid.\n - Scroll while snapping to adjust grid size."), "Button");
         GUI.Label(position2, "Edit Polygon");
         return result;
     }
-
 }
